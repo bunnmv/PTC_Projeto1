@@ -56,7 +56,6 @@ bool Framing::handle(char byte)
 			break;
 
 		case 2:
-			byte ^= 0x20;
 			if(!strcmp(&byte,&Flag))
 			{
 				ProximoEstado = 0;
@@ -65,6 +64,7 @@ bool Framing::handle(char byte)
 			}
 			else
 			{
+				byte ^= 0x20;
 				buffer[n_bytes]=byte;
 				n_bytes++;
 				ProximoEstado = 1;
@@ -86,8 +86,6 @@ bool Framing::handle(char byte)
 }
 int Framing::receive(char *BufferRecepcao)
 {
-
-
 	int i;
 	int TamanhoMensagem = strlen(BufferRecepcao);
 	if (TamanhoMensagem > max_bytes || TamanhoMensagem < min_bytes)
