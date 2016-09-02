@@ -17,60 +17,65 @@ void Framing::send(char *buffer, int bytes)
 
 bool Framing::handle(char byte)
 {
-	switch(estado)
+	static int ProximoEstado;
+
+	Estado = ProximoEstado;
+	switch(Estado)
 	{
 		/*
 		 * Maquina de Estado
-		 * Estado 0: Detectada Mensagem;
-		 * Estado 1: Recepcao de Bytes;
+		 * Estado 0: Ocioso;
+		 * Estado 1: Recepcao;
 		 * Estado 2: Byte de Escape
-		 * Estado 3: Fim de Recepcao
-		 */
+		*/
 
 		case 0:
 			if(!strcmp(&byte,&Flag))
 			{
 				//printf("\n INICIO DA MENSAGEM"\n);
-				n_bytes++;
-				estado = 1;
+				ProximoEstado = 1;
 			}
 			break;
 
 		case 1:
 			if(!strcmp(&byte,&Flag_Escape))
 			{
-				estado = 2;
+				ProximoEstado = 2;// Estado so mudara na proxima chamada
+
 			}
 			else if(!strcmp(&byte,&Flag))// fim
 			{
-				n_bytes++;
-				estado = 3;
+
+				ProximoEstado = 0;
 			}
 			else
 			{
+				buffer[n_bytes]=byte;
 				n_bytes++;
 			}
 			break;
 
 		case 2:
-			if(!strcmp(&byte,&Flag_Escape))
+			byte ^= 0x20;
+			if(!strcmp(&byte,&Flag))
 			{
-				byte ^= 0x20;
-				n_bytes++;
-				estado = 1;
+				ProximoEstado = 0;
+				// chamar checksum?
+				// salvar menasgem
 			}
-			break;
-		case 3:
-			estado = 0;
-			// chamar checksum?
-			// salvar menasgem
+			else
+			{
+				buffer[n_bytes]=byte;
+				n_bytes++;
+				ProximoEstado = 1;
+			}
 			break;
 
 		default:
 			break;
 
 	}
-	if (estado != 3)
+	if(!ProximoEstado && n_bytes)
 	{
 		return true;
 	}
@@ -78,70 +83,34 @@ bool Framing::handle(char byte)
 	{
 		return false;
 	}
-
 }
-int Framing::receive(char *buffer)
+int Framing::receive(char *BufferRecepcao)
 {
 
 
-    	int i,j;
-    	int TamanhoMensagem = strlen(buffer);
-    	for(i=0;TamanhoMensagem;i++)
-    	{
-    		 if(handle(buffer[i]))
-    		 {
-    			 printf( "Fim do quadro");
-    			 break;
-    		 }
-    	}
+	int i;
+	int TamanhoMensagem = strlen(BufferRecepcao);
+	if (TamanhoMensagem > max_bytes || TamanhoMensagem < min_bytes)
+	{
+		printf( "Quadro invalido");
+	}
+	for(i=0;TamanhoMensagem;i++)
+	{
+		 if(handle(BufferRecepcao[i]))
+		 {
+			 printf( "Fim do quadro");
+			 /*fazer checksum
+			  * if(sucesso)
+			  * Salvar Buffer
+			  * else
+			  * Descartar mensagem , memset(buffer,0,sizeof(buffer));
 
+			 */
+			 break;
+		 }
+	}
 
-    //FILE *received_file;
-    //rpmaçdp
-    //received_file = fopen(argv[3], "w");
-/*
-
-
-    if (strcmp(buffer, Flag) == 0)
-    {
-        cout << "ashow 7E"
-        //handle(Flag);
-    }
-    if (strcmp(buffer, Flag2) == 0)
-    {
-        cout << "ashow 7D"
-        //handle(Flag);
-    }
-    numero_bytes++;
-*/
-    //fclose(received_file);
     return TamanhoMensagem;
 
 }
 
-/*
-bool Framing::handle(char byte)
-{
-    int Estado;
-
-     switch(Estado)
-            {
-                case 0:
-                    break;
-
-                case 1:
-                    break;
-
-                case 2:
-                    break;
-
-                case 3:
-
-                    // return true se quadro completo ( novo 7E)
-                    break;
-
-                default:
-                    break;
-            }
-}
-*/

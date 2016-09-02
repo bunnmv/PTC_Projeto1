@@ -17,10 +17,10 @@ public:
 		max_bytes = bytes_max;
 		buffer = ((char*)(malloc(bytes_max)));
 		n_bytes = 0;
-		estado = 0;
+		Estado = 0;
 	};
 	void send(char * buffer, int bytes);
-    int receive(char * buffer);
+    int receive(char * BufferRecepcao);
     ~Framing(){}
 
 private:
@@ -32,7 +32,7 @@ private:
 	int n_bytes;
 
 	// estado atual da MEF
-	int estado;
+	int Estado;
 
 	// aqui se implementa a máquina de estados de recepção
 	// retorna true se reconheceu um quadro completo
