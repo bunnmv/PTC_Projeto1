@@ -2,10 +2,14 @@
 #define FRAMING_H_
 
 #include "Serial.h"
+#include "crc16.h"
 #include <string>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+
+
 class Framing : public Serial
 {
 
@@ -15,7 +19,7 @@ public:
 		porta = &dev;
 		min_bytes = bytes_min;
 		max_bytes = bytes_max;
-		buffer = ((char*)(malloc(bytes_max)));
+		buffer = (char*)(malloc(bytes_max));
 		n_bytes = 0;
 		Estado = 0;
 	};
@@ -50,6 +54,8 @@ private:
 	// "fcs" deve ter o valor PPPINITFCS16
 	// O resultado é o valor de CRC (16 bits)
 	// OBS: adaptado da RFC 1662 (enquadramento no PPP)
-	uint16_t pppfcs16(uint16_t fcs, unsigned char * cp, int len);
+	u16 pppfcs16( unsigned char * cp, int len);
 };
+
+
 #endif /* FRAMING_H_ */
