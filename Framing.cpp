@@ -1,15 +1,19 @@
 
 #include "Framing.h"
 #include "Serial.h"
-#include <string>
+#include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <iostream>
+#include <cstdio>
+#include <ctime>
 
 using namespace std;
 char Flag = 0x7e;
 char Flag_Escape = 0x7d;
+
 typedef unsigned short  crc;
 
 void Framing::send(char *buffer, int bytes)
@@ -124,13 +128,13 @@ int Framing::receive(char *BufferRecepcao)
     return TamanhoMensagem;
 
 }
-bool Framing::check_crc(unsigned char *buffer, int len) // checa o resultado do crc na recepcao
+bool Framing::check_crc(char *buffer, int len) // checa o resultado do crc na recepcao
 {
 	if ( pppfcs16(buffer, len + 2) == PPPGOODFCS16 )
 		return true;
 	else return false;
 }
-void Framing::gen_crc(unsigned char * buffer, int len) //Adiciona crc a mensagem
+char * Framing::gen_crc(char * buffer, int len) //Adiciona crc a mensagem
 {
 	u16 trialfcs;
 
@@ -139,17 +143,97 @@ void Framing::gen_crc(unsigned char * buffer, int len) //Adiciona crc a mensagem
 	trialfcs ^= 0xffff;                 	/* complement */
 	buffer[len] = (trialfcs & 0x00ff);      /* least significant byte first */
 	buffer[len+1] = ((trialfcs >> 8) & 0x00ff);
+	return buffer;
 
 }
-u16 Framing::pppfcs16( unsigned char * cp, int len) // Fast Frame Check Sequence 16 bits
+u16 Framing::pppfcs16( char * cp, int len) // Fast Frame Check Sequence 16 bits
 {
 	crc fcs = PPPINITFCS16; // Initial value
 
+	//assert(sizeof (u16) == 2);
+	//assert(((u16) -1) > 0);
+	//u16 fcs=PPINITFCS16
 	assert(sizeof (u16) == 2);
 	assert(((u16) -1) > 0);
 	while (len--)
 	   fcs = (fcs >> 8) ^ fcstab[(fcs ^ *cp++) & 0xff];
 	return (fcs);
+}
+
+bool Framing::arq_tx(char *buffer, int len,int estado)
+{
+	clock_t start;
+	double timeout =3; //aguarda 3 segundos até confirmar que o ack foi perdido
+	static int PE = estado;
+ 	
+	switch(PE)
+	{
+		case 0:
+			//liga o time pois o pacote foi enviado neste instante
+			start = clock();
+			this->send(buffer,len);
+			PE=1;
+
+		break;
+		case 1:
+			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout){
+				// Pacote recebido é o ponto de partida para validar o processo de arq			
+				//	receive(buffer); 
+				// testa se o frame recebido é um pacote válido (marcus)
+				// testa se o frama recebido está com o crc correto (marcus)
+				// testa se o frame recebido é um ack (ronaldo)
+				// testa se o ack recebido é o correto (ronaldo)
+				// passa para o proximo estado e desliga o timer (ronaldo)
+
+					
+			}		
+			//espera o ack0
+		break;
+	} 
+	return false;
+//retorna mensagem true;
+
+}
+
+int Framing::insertStuffByte(char *buffer,int len){
+	int i,ii;
+	for(i=0,ii=0;i<=len;i++,ii++){
+		if(buffer[i]==0x7e){
+			for(ii=len;ii>i;ii--){
+				buffer[ii]=buffer[ii-1];
+			}
+			buffer[i]=0x7d;
+			buffer[i+1]=0x5e;
+			
+		}else if(buffer[i]==0x7d){
+			for(ii=len;ii>i;ii--){
+				buffer[ii]=buffer[ii-1];
+			}			
+			buffer[i]=0x7d;
+			buffer[i+1]=0x5d;
+		}else{
+		}
+	}
+	return strlen(buffer);
+
+}
+
+int Framing::insertFlagFrame(char *buffer,int len){
+	int i;	
+	for (i=len;i>0;i--){
+		buffer[i]=buffer[i-1];
+	}
+	buffer[0] = Flag;
+	buffer[len+1]=Flag;
+	return strlen(buffer);
+}
+
+bool Framing::mountFrame(char *buffer,int len){
+	int l; 
+	buffer = gen_crc(buffer,len);
+	l=strlen(buffer);
+	l=insertStuffByte(buffer,l);
+	l=insertFlagFrame(buffer,l);
 }
 
 
