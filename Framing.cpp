@@ -113,9 +113,8 @@ int Framing::receive(char *BufferRecepcao)
 				 printf( "ERRO CRC");
 				 memset(buffer,0,sizeof(unsigned char)*max_bytes);
 				 free(buffer);
-
 			 }
-			 /*fazer checksum
+			 *fazer checksum
 			  * if(sucesso)
 			  * Salvar Buffer
 			  * else
@@ -160,97 +159,101 @@ u16 Framing::pppfcs16( char * cp, int len) // Fast Frame Check Sequence 16 bits
 	return (fcs);
 }
 
-bool Framing::arq_tx(char *buffer, int len,int estado)
+bool Framing::arq_tx(char * buffer, int len, int estado)
 {
 	clock_t start;
-	double timeout =3; //aguarda 3 segundos até confirmar que o ack foi perdido
-	static int PE = estado;
- 	int reTX =3; // retransmissões máximas
- 	int i=0 //contador de retransmissão
+	double timeout = 3; //aguarda 3 segundos até confirmar que o ack foi perdido
+	static int PE  = estado;
+ 	int ret_TX     = 3; // retransmissões máximas
+ 	int iRet       = 0 //contador de retransmissão. R
+	char ack0      = '0';
+	char ack1      = '1';
 	switch(PE)
 	{
 		case 0:
 			//liga o time pois o pacote foi enviado neste instante
-			if(i<reTX){
-			start = clock();
-			this->send(buffer,len);
-			PE=1;
-		}
+			if(iRet < ret_TX){
+				start = clock();
+				this->send(buffer, len);
+				PE = 1;
+				iRet++;
+			}else{
+				// estouro numero de retrnsmissão. O que fazer?			
+			}
 		break;
 		case 1:
 			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout){
 				// Pacote recebido é o ponto de partida para validar o processo de arq			
-				//	receive(buffer); 
+				// receive(buffer); 
 				// testa se o frame recebido é um pacote válido (marcus)
-				// testa se o frama recebido está com o crc correto (marcus) e retorna apenas o byte de informação.
-				/* int lenByte = strlen(byte_info);	
-				 *if(strlen(info) == strlen(char)){
-				 * if(info == ack1){
-				 * 		//byte ack
-				 * }else{
-				 * 		ack não foi reconhecido. ir para estado de renstramissão
-				 * }
-				 * 
-				 * 
-				 * 
-				 * 
-				 * 
-				 *}
-				 * Estouro do timeout. ir para estado de retransmissão 
-				*-----------------------
+				// testa se o frama recebido está com o crc correto (marcus) e retorna apenas o byte de informação.	
+				 if(strlen(info) == strlen(char)){
+    				 if(info == ack1){
+				 	    //byte ACK1 reconhecido
+                        PE = 2; // irá para o estado 2 para enviar próximo frame.
+                     }
+                     else{
+                        //byte ACK1 não reconhecido. Retransmissão.
+                        PE = 0; //volta para o estado 0 para reenvio.
+                     }
+                        
+				 }else{
+				 		PE = 0;//ack não foi reconhecido. ir para estado 0 de renstramissão
+				 }
+		    }
+            PE = 0;
+				//  Estouro do timeout. ir para estado de retransmissão 
+				-----------------------
 				// testa se o frame recebido é um ack (ronaldo)
 				// testa se o ack recebido é o correto (ronaldo)
 				// passa para o proximo estado e desliga o timer (ronaldo)
-
 					
 			}		
 			//espera o ack0
 		break;
 	} 
+
+        case 2:
+            //envio do proximo frame.
+
+        break;
 	return false;
 //retorna mensagem true;
-
 }
-
-int Framing::insertStuffByte(char *buffer,int len){
+int Framing::insertStuffByte(char * buffer, int len){
 	int i,ii;
-	for(i=0,ii=0;i<=len;i++,ii++){
-		if(buffer[i]==0x7e){
-			for(ii=len;ii>i;ii--){
-				buffer[ii]=buffer[ii-1];
+	for(i = 0,ii = 0; i <= len; i++, ii++){
+		if(buffer[i] == Flag){
+			for(ii = len; ii > i; ii--){
+				buffer[ii] = buffer[ii - 1];
 			}
-			buffer[i]=0x7d;
-			buffer[i+1]=0x5e;
+			buffer[i]   = Flag_Escape;
+			buffer[i + 1] = 0x5e; //Flag XOR 0x20
 			
-		}else if(buffer[i]==0x7d){
-			for(ii=len;ii>i;ii--){
-				buffer[ii]=buffer[ii-1];
+		}else if(buffer[i] == Flag_Escape){
+			for(ii = len;ii > i; ii--){
+				buffer[ii] = buffer[ii - 1];
 			}			
-			buffer[i]=0x7d;
-			buffer[i+1]=0x5d;
+			buffer[i]   = Flag_Escape;
+			buffer[i + 1] = 0x5d; //Flag_Escape XOR 0x20
 		}else{
 		}
 	}
 	return strlen(buffer);
-
 }
-
-int Framing::insertFlagFrame(char *buffer,int len){
+int Framing::insertFlagFrame(char * buffer, int len){
 	int i;	
-	for (i=len;i>0;i--){
-		buffer[i]=buffer[i-1];
+	for (i = len; i > 0; i--){
+		buffer[i] = buffer[i - 1];
 	}
 	buffer[0] = Flag;
-	buffer[len+1]=Flag;
+	buffer[len + 1] = Flag;
 	return strlen(buffer);
 }
-
-bool Framing::mountFrame(char *buffer,int len){
+bool Framing::mountFrame(char * buffer, int len){
 	int l; 
-	buffer = gen_crc(buffer,len);
-	l=strlen(buffer);
-	l=insertStuffByte(buffer,l);
-	l=insertFlagFrame(buffer,l);
+	buffer = gen_crc(buffer, len);
+	l = strlen(buffer);
+	l = insertStuffByte(buffer, l);
+	l = insertFlagFrame(buffer, l);
 }
-
-
