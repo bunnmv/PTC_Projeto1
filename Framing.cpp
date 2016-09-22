@@ -165,22 +165,39 @@ bool Framing::arq_tx(char *buffer, int len,int estado)
 	clock_t start;
 	double timeout =3; //aguarda 3 segundos até confirmar que o ack foi perdido
 	static int PE = estado;
- 	
+ 	int reTX =3; // retransmissões máximas
+ 	int i=0 //contador de retransmissão
 	switch(PE)
 	{
 		case 0:
 			//liga o time pois o pacote foi enviado neste instante
+			if(i<reTX){
 			start = clock();
 			this->send(buffer,len);
 			PE=1;
-
+		}
 		break;
 		case 1:
 			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout){
 				// Pacote recebido é o ponto de partida para validar o processo de arq			
 				//	receive(buffer); 
 				// testa se o frame recebido é um pacote válido (marcus)
-				// testa se o frama recebido está com o crc correto (marcus)
+				// testa se o frama recebido está com o crc correto (marcus) e retorna apenas o byte de informação.
+				/* int lenByte = strlen(byte_info);	
+				 *if(strlen(info) == strlen(char)){
+				 * if(info == ack1){
+				 * 		//byte ack
+				 * }else{
+				 * 		ack não foi reconhecido. ir para estado de renstramissão
+				 * }
+				 * 
+				 * 
+				 * 
+				 * 
+				 * 
+				 *}
+				 * Estouro do timeout. ir para estado de retransmissão 
+				*-----------------------
 				// testa se o frame recebido é um ack (ronaldo)
 				// testa se o ack recebido é o correto (ronaldo)
 				// passa para o proximo estado e desliga o timer (ronaldo)
