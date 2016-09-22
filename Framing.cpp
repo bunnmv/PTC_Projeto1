@@ -10,6 +10,13 @@
 #include <cstdio>
 #include <ctime>
 
+#define msgTypeACK 0;
+#define msgTypePayload 1;
+#define numSeq0 0;
+#define numSeq1 1;
+#define ACK_0 0;
+#define ACK_1 1;
+
 using namespace std;
 char Flag = 0x7e;
 char Flag_Escape = 0x7d;
@@ -161,6 +168,14 @@ u16 Framing::pppfcs16( char * cp, int len) // Fast Frame Check Sequence 16 bits
 
 bool Framing::arq_tx(char * buffer, int len, int estado)
 {
+	// Pacote recebido é o ponto de partida para validar o processo de arq			
+	// receive(buffer); 
+	// testa se o frame recebido é um pacote válido (marcus)
+	// testa se o frama recebido está com o crc correto (marcus) e retorna apenas o byte de informação.
+	//-----------------------
+	// testa se o frame recebido é um ack (ronaldo) - OK
+	// testa se o ack recebido é o correto (ronaldo) - OK
+	// passa para o proximo estado e desliga o timer (ronaldo) - OK
 	clock_t start;
 	double timeout = 3; //aguarda 3 segundos até confirmar que o ack foi perdido
 	static int PE  = estado;
@@ -183,32 +198,24 @@ bool Framing::arq_tx(char * buffer, int len, int estado)
 		break;
 		case 1:
 			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout){
-				// Pacote recebido é o ponto de partida para validar o processo de arq			
-				// receive(buffer); 
-				// testa se o frame recebido é um pacote válido (marcus)
-				// testa se o frama recebido está com o crc correto (marcus) e retorna apenas o byte de informação.	
+	
 				 if(strlen(info) == strlen(char)){
-    				 if(info == ack1){
-				 	    //byte ACK1 reconhecido
-                        PE = 2; // irá para o estado 2 para enviar próximo frame.
-                     }
-                     else{
-                        //byte ACK1 não reconhecido. Retransmissão.
-                        PE = 0; //volta para o estado 0 para reenvio.
-                     }
-                        
-				 }else{
-				 		PE = 0;//ack não foi reconhecido. ir para estado 0 de renstramissão
-				 }
-		    }
-            PE = 0;
-				//  Estouro do timeout. ir para estado de retransmissão 
-				-----------------------
-				// testa se o frame recebido é um ack (ronaldo)
-				// testa se o ack recebido é o correto (ronaldo)
-				// passa para o proximo estado e desliga o timer (ronaldo)
+    				 	if(info == ack1){
+				 	        //byte ACK1 reconhecido
+                        			PE = 2; // irá para o estado 2 para enviar próximo frame.
+                     			}else{
+                        			//byte ACK1 não reconhecido. Retransmissão.
+                        			PE = 0; //volta para o estado 0 para reenvio.
+                     			}
+                       		}else{
+			 		PE = 0;//ack não foi reconhecido. ir para estado 0 de renstramissão
+				}
+		    	}
+            		//  Estouro do timeout. ir para estado de retransmissão 
+            		PE = 0;
+
 					
-			}		
+					
 			//espera o ack0
 		break;
 	} 
