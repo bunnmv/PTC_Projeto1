@@ -30,9 +30,6 @@ void Framing::send(char *buffer, int bytes)
 
 bool Framing::handle(char byte)
 {
-	static int ProximoEstado;
-
-	Estado = ProximoEstado;
 	switch(Estado)
 	{
 		/*
@@ -45,42 +42,53 @@ bool Framing::handle(char byte)
 		case 0:
 			if(byte == Flag)
 			{
-				//printf("\n INICIO DA MENSAGEM"\n);
-				ProximoEstado = 1;
+				std::cout << "Inicio Da Mensagem!" << std::endl;
+				n_bytes = 0;
+				Estado =1;
 			}
 			break;
 
 		case 1:
-			if(byte==Flag_Escape)
+			if(n_bytes > max_bytes)
 			{
-				ProximoEstado = 2;// Estado so mudara na proxima chamada
-
-			}
-			else if(!strcmp(&byte,&Flag))// fim
-			{
-
-				ProximoEstado = 0;
+				std::cout << "Overflow: " << this->n_bytes << " bytes" << std::endl;
+				Estado = 0;
 			}
 			else
 			{
-				buffer[n_bytes]=byte;
-				n_bytes++;
+
+				if(!strcmp(&byte,&Flag))// fim
+				{
+					std::cout << "Fim Da Mensagem" << std::endl;
+					Estado = 0;
+					return true;
+				}
+				else if(byte==Flag_Escape)
+				{
+					Estado = 2;
+
+				}
+				else
+				{
+					buffer[n_bytes]=byte;
+					n_bytes++;
+				}
 			}
 			break;
 
 		case 2:
 			if(byte == Flag)
 			{
-				ProximoEstado = 0;
-				// chamar checksum?
-				// salvar menasgem
+				std::cout << "Fim Da Mensagem" << std::endl;
+				Estado = 0;
+				return true;
 			}
 			else
 			{
 				byte ^= 0x20;
 				buffer[n_bytes]=byte;
 				n_bytes++;
-				ProximoEstado = 1;
+				Estado = 1;
 			}
 			break;
 
@@ -88,28 +96,35 @@ bool Framing::handle(char byte)
 			break;
 
 	}
-	if(!ProximoEstado && n_bytes)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
 }
 int Framing::receive(char *BufferRecepcao)
 {
 
 	int TamanhoMensagem = strlen(BufferRecepcao);
+	bool ControleMaquina = false;
 	if (TamanhoMensagem > max_bytes || TamanhoMensagem < min_bytes)
 	{
-		printf( "Quadro invalido");
+		std::cout << "Quadro Invalido" << std::endl;
 	}
-	for(int i=0;TamanhoMensagem;i++)
+	for(int i=0;i<TamanhoMensagem && !ControleMaquina;i++)
 	{
-		 if(handle(BufferRecepcao[i]))
-		 {
-			 printf( "Fim do quadro");
+		 ControleMaquina = handle(BufferRecepcao[i]);
+
+	}
+
+	if(this->check_crc(buffer,n_bytes))
+	 {
+		memcpy(buffer, this->buffer,TamanhoMensagem);
+		std::cout << "Data received: " << buffer  << std::endl;
+		}
+	 else
+	 {
+		std::cout << "CRC does not match!: " << buffer  << std::endl;
+	 }
+
+	return n_bytes;
+}
+
 			 /*
 			 if(check_crc(buffer,TamanhoMensagem))
 			 {
@@ -126,14 +141,16 @@ int Framing::receive(char *BufferRecepcao)
 			  * Salvar Buffer
 			  * else
 			  * Descartar mensagem , memset(buffer,0,sizeof(buffer));
-			 */
+
 			 break;
 		 }
 	}
 
     return TamanhoMensagem;
 
+
 }
+*/
 bool Framing::check_crc(char *buffer, int len) // checa o resultado do crc na recepcao
 {
 	if ( pppfcs16(buffer, len + 2) == PPPGOODFCS16 )
