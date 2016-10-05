@@ -285,7 +285,24 @@ int Framing::insertControlFrame(char * buffer, int len, int typeMsg, int seqNum,
 	//EXEMPLO : tipo payload, sequencia 0, ack 0;. 
 	char bytecontrol = 0x00;
 	int i;	
-	bytecontrol |= ( 1 << 7) | (0 << 6) | (0 << 5);
+	if(typeMsg == typeACK){
+		bytecontrol |= ( typeACK << 7)
+	}else{
+		bytecontrol |= ( typePayload << 7)
+	}
+	
+	if(seqNum == numSeq0){
+		bytecontrol |= (numSeq0 << 6)
+	}else{
+		bytecontrol |= (numSeq1 << 6)
+	}
+	
+	if(ackNum == ACK_0){
+		bytecontrol |= (ACK_0 << 5)
+	}else{
+		bytecontrol |= (ACK_1 << 5)
+	}
+	
 	for (i = len; i > 0; i--){
 		buffer[i] = buffer[i - 1];
 	}
