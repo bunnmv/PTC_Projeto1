@@ -16,6 +16,8 @@
 #define numSeq1 1;
 #define ACK_0 0;
 #define ACK_1 1;
+#define TypeACK 0;
+#define TypePayload 1;
 
 using namespace std;
 char Flag = 0x7e;
@@ -273,6 +275,14 @@ int Framing::insertFlagFrame(char * buffer, int len){
 	buffer[0] = Flag;
 	buffer[len + 1] = Flag;
 	return strlen(buffer);
+}
+
+int Framing::insertControlFrame(char * buffer, int len, int seq, int typeMsg, int ackNum){
+//insere tipo da mensagem
+//insere numero de sequencia
+//insere numero ack
+	char
+	
 }
 bool Framing::mountFrame(char * buffer, int len){
 	int l; 
