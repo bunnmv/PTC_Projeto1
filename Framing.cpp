@@ -277,11 +277,20 @@ int Framing::insertFlagFrame(char * buffer, int len){
 	return strlen(buffer);
 }
 
-int Framing::insertControlFrame(char * buffer, int len, int seq, int typeMsg, int ackNum){
+int Framing::insertControlFrame(char * buffer, int len, int typeMsg, int seqNum, int ackNum){
 //insere tipo da mensagem
 //insere numero de sequencia
 //insere numero ack
-	char
+// byte control sera o segundo byte do frame.
+	//EXEMPLO : tipo payload, sequencia 0, ack 0;. 
+	char bytecontrol = 0x00;
+	int i;	
+	bytecontrol |= ( 1 << 7) | (0 << 6) | (0 << 5);
+	for (i = len; i > 0; i--){
+		buffer[i] = buffer[i - 1];
+	}
+	buffer[0] = bytecontrol;
+	return strlen(buffer);
 	
 }
 bool Framing::mountFrame(char * buffer, int len){
@@ -289,5 +298,8 @@ bool Framing::mountFrame(char * buffer, int len){
 	buffer = gen_crc(buffer, len);
 	l = strlen(buffer);
 	l = insertStuffByte(buffer, l);
+	l = insertControlByte(buffer,l,TypePayload,numSeq0,ACK_0,);
 	l = insertFlagFrame(buffer, l);
+
+
 }
