@@ -21,7 +21,7 @@ public:
 	int insertStuffByte(char *buffer,int len);
 	
 	// monta o frame:
-	bool mountFrame(char *buffer,int len);
+	bool mountFrame(char *buffer,int len,int typeMsg, int seqNum, int ackNum);
 	bool arq_tx(char *buffer, int len,int estado);
 	Framing(int bytes_min, int bytes_max){
 		//porta = &dev;
@@ -58,6 +58,7 @@ private:
 	// gera o valor de CRC dos bytes contidos em buffer. O valor de CRC
 	// é escrito em buffer[len] e buffer[len+1]
 
+	int insertControlByte(char * buffer, int len, int typeMsg, int seqNum, int ackNum);
 
 	// calcula o valor de CRC dos bytes contidos em "cp".
 	// "fcs" deve ter o valor PPPINITFCS16

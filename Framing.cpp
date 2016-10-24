@@ -10,14 +10,14 @@
 #include <cstdio>
 #include <ctime>
 
-#define msgTypeACK 0;
-#define msgTypePayload 1;
-#define numSeq0 0;
-#define numSeq1 1;
-#define ACK_0 0;
-#define ACK_1 1;
-#define TypeACK 0;
-#define TypePayload 1;
+#define msgTypeACK 0
+#define msgTypePayload 1
+#define numSeq0 0
+#define numSeq1 1
+#define ACK_0 0
+#define ACK_1 1
+#define TypeACK 0
+#define TypePayload 1
 
 using namespace std;
 char Flag = 0x7e;
@@ -199,13 +199,15 @@ bool Framing::arq_tx(char * buffer, int len, int estado)
 	double timeout = 3; //aguarda 3 segundos até confirmar que o ack foi perdido
 	static int PE  = estado;
  	int ret_TX     = 3; // retransmissões máximas
- 	int iRet       = 0 //contador de retransmissão. R
-	char ack0      = '0';
-	char ack1      = '1';
+ 	int iRet       = 0;		//contador de retransmissão. R
+
+ 	char ByteAuxiliar = buffer[0]; // Primeiro byte da mensagem
+
 	switch(PE)
 	{
-		case 0:
+		case 0: // Envia frame, independente do numero de sequencia
 			//liga o time pois o pacote foi enviado neste instante
+			/*
 			if(iRet < ret_TX){
 				start = clock();
 				this->send(buffer, len);
@@ -214,35 +216,35 @@ bool Framing::arq_tx(char * buffer, int len, int estado)
 			}else{
 				// estouro numero de retrnsmissão. O que fazer?			
 			}
+			*/
 		break;
+
 		case 1:
-			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout){
-	
-				 if(strlen(info) == strlen(char)){
-    				 	if(info == ack1){
-				 	        //byte ACK1 reconhecido
-                        			PE = 2; // irá para o estado 2 para enviar próximo frame.
-                     			}else{
-                        			//byte ACK1 não reconhecido. Retransmissão.
-                        			PE = 0; //volta para o estado 0 para reenvio.
-                     			}
-                       		}else{
-			 		PE = 0;//ack não foi reconhecido. ir para estado 0 de renstramissão
+			while((( std::clock() - start ) / (double) CLOCKS_PER_SEC) < timeout)
+			{
+				if(ByteAuxiliar & (msgTypeACK << 7))
+				{
+					if(ByteAuxiliar & (ACK_0 << 5))
+					{
+						//byte ACK0 reconhecido
+						PE = 2; // irá para o estado 2 para enviar próximo frame.
+					}
+					else
+					{
+						//byte ACK0 não reconhecido. Retransmissão.
+						PE = 0; //volta para o estado 0 para reenvio.
+					}
 				}
-		    	}
-            		//  Estouro do timeout. ir para estado de retransmissão 
-            		PE = 0;
-
-					
-					
+			}
+			//  Estouro do timeout. ir para estado de retransmissão
+			PE = 0;
 			//espera o ack0
-		break;
-	} 
+			break;
 
-        case 2:
-            //envio do proximo frame.
+		default:
+			break;
+	}
 
-        break;
 	return false;
 //retorna mensagem true;
 }
@@ -277,7 +279,7 @@ int Framing::insertFlagFrame(char * buffer, int len){
 	return strlen(buffer);
 }
 
-int Framing::insertControlFrame(char * buffer, int len, int typeMsg, int seqNum, int ackNum){
+int Framing::insertControlByte(char * buffer, int len, int typeMsg, int seqNum, int ackNum){
 //insere tipo da mensagem
 //insere numero de sequencia
 //insere numero ack
@@ -289,22 +291,30 @@ int Framing::insertControlFrame(char * buffer, int len, int typeMsg, int seqNum,
 // campo 5 ~ 1 = reservado.
 	char bytecontrol = 0x00;
 	int i;	
-	if(typeMsg == typeACK){
-		bytecontrol |= ( typeACK << 7)
-	}else{
-		bytecontrol |= ( typePayload << 7)
+	if(typeMsg == TypeACK)
+	{
+		bytecontrol |= (TypeACK << 7);
+	}
+	else
+	{
+		bytecontrol |= ( TypePayload << 7);
+	}
+	if(seqNum == numSeq0)
+	{
+		bytecontrol |= (numSeq0 << 6);
+	}
+	else
+	{
+		bytecontrol |= (numSeq1 << 6);
 	}
 	
-	if(seqNum == numSeq0){
-		bytecontrol |= (numSeq0 << 6)
-	}else{
-		bytecontrol |= (numSeq1 << 6)
+	if(ackNum == ACK_0)
+	{
+		bytecontrol |= (ACK_0 << 5);
 	}
-	
-	if(ackNum == ACK_0){
-		bytecontrol |= (ACK_0 << 5)
-	}else{
-		bytecontrol |= (ACK_1 << 5)
+	else
+	{
+		bytecontrol |= (ACK_1 << 5);
 	}
 	
 	for (i = len; i > 0; i--){
@@ -312,9 +322,8 @@ int Framing::insertControlFrame(char * buffer, int len, int typeMsg, int seqNum,
 	}
 	buffer[0] = bytecontrol;
 	return strlen(buffer);
-	
 }
-bool Framing::mountFrame(char * buffer, int len,int typeMsg, int seqNum, int ackNum){
+bool Framing::mountFrame(char * buffer, int len, int typeMsg, int seqNum, int ackNum){
 	// A função mount frame precisa receber o ponteiro do payload(dados), respectivo tamanho, o tipo de mensagem, numero
 	// sequencia e ack.
 	int l; 
@@ -323,6 +332,5 @@ bool Framing::mountFrame(char * buffer, int len,int typeMsg, int seqNum, int ack
 	l = insertStuffByte(buffer, l);
 	l = insertControlByte(buffer, l, typeMsg, seqNum, ackNum);
 	l = insertFlagFrame(buffer, l);
-
-
+	return true;
 }

@@ -30,7 +30,7 @@ int main(){
     	//Serial serial(path,9600);
    	 Framing testa(8,1024);
    	int idx = strlen(data);
-	testa.mountFrame(data,idx);
+	testa.mountFrame(data,idx,0,0,);
 	stream.write((char*)data,15);
 	stream.close();
 
